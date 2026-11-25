@@ -294,6 +294,46 @@ td code, .mono {
 .徽章.败 { background: var(--败底); color: var(--败) }
 .徽章.信 { background: var(--信底); color: var(--信) }
 
+.input, input.输入 {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--线);
+  border-radius: 2px;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--墨);
+  min-width: 16rem;
+}
+.input:focus { outline: 2px solid var(--信亮); outline-offset: 1px }
+.提示条.坏 { background: var(--败底); border-left-color: var(--败) }
+.核块 {
+  border: 1px solid var(--线弱);
+  background: var(--块);
+  padding: 0.8rem 0.9rem;
+  margin: 0.9rem 0;
+  backdrop-filter: blur(4px);
+}
+.核头 {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+}
+.核淡 { color: var(--淡); font-size: 0.8rem; font-weight: 400 }
+.违规 {
+  margin: 0.5rem 0 1rem;
+  padding: 0.6rem 0.8rem 0.6rem 1.6rem;
+  background: var(--败底);
+  border-left: 3px solid var(--败);
+  color: var(--败);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+}
+tr.归档行 td { opacity: 0.62 }
+tr.归档行 td:first-child { text-decoration: line-through }
+
 @keyframes brand-in {
   from { opacity: 0; letter-spacing: 0.4em; transform: translateY(8px) }
   to { opacity: 1; letter-spacing: 0.22em; transform: translateY(0) }

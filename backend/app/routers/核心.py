@@ -37,6 +37,11 @@ class 回读请求(BaseModel):
     说明: str = ""
 
 
+class 归档请求(BaseModel):
+    桶键: str
+    说明: str = ""
+
+
 class 回滚请求(BaseModel):
     票号: str
     说明: str = ""
@@ -96,11 +101,20 @@ def 列版本(状态: str = ""):
 
 
 @路由.get("/分桶规")
-def 列分桶():
+def 列分桶(状态: str = ""):
+    """分桶规页：生效规在前，归档规随后列出（带归档时/归档因），页面不藏桶类型。"""
     conn = 连接()
     try:
+        if 状态:
+            rows = conn.execute(
+                "SELECT * FROM 分桶规 WHERE 状态=? ORDER BY 更新时 DESC, 桶键", (状态,)
+            )
+        else:
+            rows = conn.execute(
+                "SELECT * FROM 分桶规 ORDER BY 状态<>'生效', 更新时 DESC, 桶键"
+            )
         out = []
-        for r in conn.execute("SELECT * FROM 分桶规 ORDER BY 更新时 DESC"):
+        for r in rows:
             d = dict(r)
             try:
                 d["规则"] = json.loads(d["规则"])
@@ -110,6 +124,22 @@ def 列分桶():
         return out
     finally:
         conn.close()
+
+
+@路由.get("/互斥核证")
+def 互斥核证(开关键: str = ""):
+    """核证口径：开关键 / 生效规列表 / 归档规 / 策略标记 / valid。留空或 * 为全站。"""
+    return 分桶.做核证(None if 开关键 in ("", "*") else 开关键)
+
+
+@路由.post("/分桶/归档")
+def 归档分桶(体: 归档请求):
+    try:
+        return 分桶.归档桶(体.model_dump())
+    except 分桶.互斥拒绝 as e:
+        raise HTTPException(400, str(e))
+    except 分桶.写锁冲突 as e:
+        raise HTTPException(409, f"归档与写规并发，已失败闭：{e}")
 
 
 @路由.get("/下发票")
@@ -178,7 +208,12 @@ def 做入轨(体: 入轨请求):
 
 @路由.post("/分桶")
 def 做分桶(体: 分桶请求):
-    return 分桶.写桶(体.model_dump())
+    try:
+        return 分桶.写桶(体.model_dump())
+    except 分桶.互斥拒绝 as e:
+        raise HTTPException(400, f"互斥口径拒绝：{e}")
+    except 分桶.写锁冲突 as e:
+        raise HTTPException(409, f"写规与下发并发，已失败闭：{e}")
 
 
 @路由.post("/下发")
@@ -211,8 +246,9 @@ def 装夹具(名: str = "入轨样例"):
     if 类型 == "入轨":
         return 入轨.入一批(体)
     if 类型 == "分桶":
-        outs = [分桶.写桶(x) for x in 体.get("分桶") or []]
-        return {"类型": "分桶", "结果": outs}
+        return 分桶.装一批(体)
+    if 类型 == "互斥场景":
+        return 分桶.跑互斥场景(体)
     if 类型 == "下发":
         return 下发.装下发夹具(体)
     if 类型 == "回读":

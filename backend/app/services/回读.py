@@ -1,12 +1,9 @@
 import json
-from datetime import datetime, timezone
 
-from app.db import 连接
 from fastapi import HTTPException
 
-
-def 此刻() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+from app.db import 连接
+from app.seed import 此刻
 
 
 def 记回读(体: dict) -> dict:
@@ -21,18 +18,29 @@ def 记回读(体: dict) -> dict:
         证号 = 体.get("证号") or f"证-{票号}-{体['边缘键']}"
         所见 = 体.get("所见版本键") or ticket["版本键"]
         结果 = 体.get("结果", "确认")
+        说明 = 体.get("说明", "")
         if 结果 == "确认" and 所见 != ticket["版本键"]:
             结果 = "偏差"
+        # 回读须与分桶规协同：票面烙的规世代若与库中生效规不一致（被归档/被同类型替换），
+        # 则这条「确认」不成立 —— 边缘看见的可能是已归档口径。
+        if 结果 == "确认" and ticket["规世代"]:
+            bucket = conn.execute("SELECT * FROM 分桶规 WHERE 桶键=?", (ticket["桶键"],)).fetchone()
+            if not bucket:
+                结果, 说明 = "偏差", f"规漂移：分桶已不存在（{ticket['桶键']}）"
+            elif bucket["状态"] != "生效":
+                结果, 说明 = "偏差", f"规漂移：分桶{bucket['状态']}（归档因={bucket['归档因'] or '—'}）"
+            elif bucket["世代"] != ticket["规世代"]:
+                结果, 说明 = "偏差", f"规漂移：票面世代 {ticket['规世代']} ≠ 生效世代 {bucket['世代']}"
         conn.execute(
             """INSERT INTO 回读证(证号, 票号, 边缘键, 所见版本键, 结果, 回读时, 说明)
                VALUES (?,?,?,?,?,?,?)
                ON CONFLICT(证号) DO UPDATE SET
                  所见版本键=excluded.所见版本键, 结果=excluded.结果,
                  回读时=excluded.回读时, 说明=excluded.说明""",
-            (证号, 票号, 体["边缘键"], 所见, 结果, 此刻(), 体.get("说明", "")),
+            (证号, 票号, 体["边缘键"], 所见, 结果, 此刻(), 说明),
         )
         conn.commit()
-        return {"证号": 证号, "结果": 结果}
+        return {"证号": 证号, "结果": 结果, "说明": 说明}
     finally:
         conn.close()
 

@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import 轨台 from "./pages/轨台.jsx";
 import 开关轨 from "./pages/开关轨.jsx";
 import 分桶规 from "./pages/分桶规.jsx";
+import 互斥核证 from "./pages/互斥核证.jsx";
 import 下发票 from "./pages/下发票.jsx";
 import 回读台 from "./pages/回读台.jsx";
 import 命运账 from "./pages/命运账.jsx";
@@ -13,6 +14,7 @@ const 主链 = [
   ["/", "轨台"],
   ["/开关轨", "开关轨"],
   ["/分桶规", "分桶规"],
+  ["/互斥核证", "互斥核证"],
   ["/下发票", "下发票"],
   ["/回读台", "回读台"],
   ["/命运账", "命运账"],
@@ -49,6 +51,7 @@ export default function App() {
             <Route path="/" element={<轨台 />} />
             <Route path="/开关轨" element={<开关轨 />} />
             <Route path="/分桶规" element={<分桶规 />} />
+            <Route path="/互斥核证" element={<互斥核证 />} />
             <Route path="/下发票" element={<下发票 />} />
             <Route path="/回读台" element={<回读台 />} />
             <Route path="/命运账" element={<命运账 />} />

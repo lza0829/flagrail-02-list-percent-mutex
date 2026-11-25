@@ -1,10 +1,6 @@
-from datetime import datetime, timezone
-
 from app.db import 连接
-
-
-def 此刻() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+from app.seed import 此刻
+from app.modules.名单百分比互斥 import 核证
 
 
 def 跑贯验() -> dict:
@@ -36,6 +32,15 @@ def 跑贯验() -> dict:
                 (r["票号"],),
             ).fetchone():
                 问题.append(f"回滚无命运:{r['票号']}")
+        # 互斥口径：同开关键生效互斥族规至多一条，且不得双类型并行
+        for 键 in 核证(conn)["开关键们"]:
+            问题.extend(f"互斥违反[{键['开关键']}]:{v}" for v in 键["违规"])
+        # 已下发票不得落在归档规上（并发漏网也会在这里被兜住）
+        for r in conn.execute(
+            "SELECT t.票号, t.桶键 FROM 下发票 t JOIN 分桶规 b ON b.桶键=t.桶键 "
+            "WHERE t.状态='已下发' AND b.状态='已归档'"
+        ):
+            问题.append(f"下发落在归档规:{r['票号']}@{r['桶键']}")
 
         通过 = 1 if not 问题 else 0
         说明 = "齐" if 通过 else "; ".join(问题)
